@@ -71,7 +71,6 @@ void ATCDisplays::disable()
 
 void ATCDisplays::enable()
 {
-    //_previousMillis = millis() - _speed;
     _lastCount = 0;
     resume();
 }

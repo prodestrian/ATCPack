@@ -1,12 +1,11 @@
 #ifndef ATCSYNCHROTRON_H
 #define ATCSYNCHROTRON_H
 
-// Load required Dependencies
-#include <FastLED.h>
-
 //remove annoying pragma messages
 #define FASTLED_INTERNAL
-#define FASTLED_ESP8266_RAW_PIN_ORDER
+
+// Load required Dependencies
+#include <FastLED.h>
 
 // Max LEDs the Synchrotron can have (used for memory allocation)
 // NOTE: This doesn't need to be changed unless you plan to run an LED ring LARGER than 60-LEDS.
@@ -47,7 +46,7 @@ public:
         }
 
         // Public methods
-        void update(bool force = false);
+        bool update(bool force = false);
         void clear();
         void disable();
         void enable();
@@ -62,6 +61,7 @@ public:
         int _currentCluster = 0;
         int _loopInterval = 1500;
         int _clusterInterval = 100;
+        int _ledInterval = 20;
         int _fadeIncrement = 2;
         int _firstLedPosition = 0;
         bool _isActive = true;
@@ -70,6 +70,7 @@ public:
         unsigned long _currentMillis;
         unsigned long _loopMillis = 0;
         unsigned long _clusterMillis = 0;
+        unsigned long _ledMillis = 0;
         uint16_t _clusterBrightness[MAX_CLUSTER_COUNT] = {0};
 
         // We default to pure RED for the Synchrotron
@@ -78,7 +79,7 @@ public:
 
         bool _checkTimer(unsigned long &millis, int &interval);
         void _updateClusterBrightness();
-        void _updateLeds();
+        void _updateLedBrightness();
         int _getOffsetLedPosition(int currentPosition);
         int _getClusterLength(int clusterIndex);
         int _getFirstIndexInCluster(int clusterIndex);

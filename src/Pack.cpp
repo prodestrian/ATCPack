@@ -4,7 +4,7 @@
 /**
  * Load GhostLab42/Spongeface Display Wrapper Class
  */
-#include "ATCDisplays/ATCDisplays.h"
+#include <ATCDisplays.h>
 ATCDisplays displays;
 
 /**
@@ -28,9 +28,33 @@ ATCDisplays displays;
 
 ATCSynchrotron synchrotron;
 
+/**
+ * Setup Comms from the Wand
+ *
+ * !! IMPORTANT NOTE !!
+ * As we are using the AltSoftSerial library under the hood,
+ * this means the Rx/Tx pins are locked at the hardware level and can not be changed.
+ *
+ * For an Arduino Nano you should connect:
+ * Pack pin 8 (receive) to Wand pin 9 (transmit)
+ * Pack pin 9 (transmit) to Wand pin 8 (receive)
+ * IMPORTANT: Pin 10 is NOT available for PWM anymore,
+ * but can still be used as a standard Digital IO pin.
+ * For more information (including other Arduino devices):
+ * https://www.pjrc.com/teensy/td_libs_AltSoftSerial.html
+ */
+#include <SerialComms.h>
+SerialComms wand;
+
 void setup() {
-    Serial.begin(115200);
+    if (DEBUG) {
+        Serial.begin(115200);
+    }
+
     debugln(F("Initializing ATC Pack V3..."));
+
+    // Initialize Serial Communications with the Wand
+    wand.begin(SERIAL_COMMS_BAUD_RATE, SERIAL_COMMS_TERMINATOR);
 
     // Initialize GhostLab42 Displays
     displays.init();
@@ -43,9 +67,19 @@ void setup() {
     // near the CPU/knob box.
     synchrotron.setFirstLedPosition(15);
 
-    synchrotron.setLoopInterval(1600);
-    synchrotron.setClusterInterval(100);
-    synchrotron.setFadeIncrement(2);
+    // 60 LED ring
+    if (SYNCHROTRON_LED_COUNT == 60)
+    {
+        synchrotron.setLoopInterval(1600);
+        synchrotron.setClusterInterval(100);
+        synchrotron.setFadeIncrement(2);
+    } else
+    {
+        // 40 LED ring
+        synchrotron.setLoopInterval(1600);
+        synchrotron.setClusterInterval(100);
+        synchrotron.setFadeIncrement(4);
+    }
 
     // Trigger an immediate update of the Synchrotron
     synchrotron.update(true);
@@ -53,7 +87,44 @@ void setup() {
     debugln(F("ATC Pack V3 Initialized and Ready!"));
 }
 
+int changeCounter = 0;
 void loop() {
+
     displays.update();
-    synchrotron.update();
+
+    wand.update();
+
+    if (wand.changed()) {
+        /**
+         * TODO: We should refactor this to use numeric codes instead of strings
+         * These should be defined within SerialMessages as Enums.
+         * We could then set the max code and reject any value which is not within this range (eg 0-10).
+         * We should NOT set wand.changed() to true if an invalid value was received.
+         */
+        changeCounter++;
+        debug("Changed: ");
+        debugln(changeCounter);
+        // The Wand has sent a new message
+        if (wand.isMessage(STR_MSG_ACTIVE)) {
+            synchrotron.setColor(CRGB(255,0,0));
+//            displays.enable();
+//            synchrotron.enable();
+
+            debugln("Active");
+        } else if (wand.isMessage(STR_MSG_IDLE)) {
+            synchrotron.setColor(CRGB(0,255,0));
+//            displays.disable();
+//            synchrotron.disable();
+            debugln("Idle");
+        } else {
+            debugln(wand.message());
+        }
+    }
+
+    if (synchrotron.update()) {
+        // Clear the Serial buffer of any possible garbage values
+        wand.flushBuffer();
+        // Skip the rest of the loop if we wrote to the LEDs
+        return;
+    }
 }

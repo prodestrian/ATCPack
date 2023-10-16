@@ -5,7 +5,7 @@ ATCSynchrotron::ATCSynchrotron()
     //
 };
 
-void ATCSynchrotron::update(bool force)
+bool ATCSynchrotron::update(bool force)
 {
     _currentMillis = millis();
 
@@ -22,8 +22,18 @@ void ATCSynchrotron::update(bool force)
         _updateClusterBrightness();
     }
 
-    // We must call this on every loop (every 1ms) for a smooth fadeout
-    _updateLeds();
+    _updateLedBrightness();
+
+    if (_checkTimer(_ledMillis, _ledInterval) || force) {
+        // Write to the LED strip
+        FastLED.show();
+
+        // Return true as we wrote LEDs in this cycles
+        return true;
+    }
+
+    // No LEDs were written in this cycle
+    return false;
 };
 
 void ATCSynchrotron::clear()
@@ -40,6 +50,8 @@ void ATCSynchrotron::disable()
 void ATCSynchrotron::enable()
 {
     _isActive = true;
+    // Trigger an immediate update
+    update(true);
 };
 
 void ATCSynchrotron::setLoopInterval(int loopInterval)
@@ -151,7 +163,7 @@ void ATCSynchrotron::_updateClusterBrightness()
     }
 }
 
-void ATCSynchrotron::_updateLeds()
+void ATCSynchrotron::_updateLedBrightness()
 {
     for (int clusterIndex = 0; clusterIndex < _clusterCount; clusterIndex++)
     {
@@ -195,7 +207,4 @@ void ATCSynchrotron::_updateLeds()
             _leds[ledPosition].nscale8( brightness);
         }
     }
-
-    // Write to the LED strip
-    FastLED.show();
 }

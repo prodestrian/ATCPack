@@ -22,5 +22,25 @@
 
 #include "SerialMessages.h"
 
+enum STATES
+{
+    STATE_INACTIVE,
+
+    STATE_ACTIVE,
+
+    STATE_MUSIC,
+
+    STATE_PARTY,
+};
+
+/**
+ * Sound files
+ * These are located in the '01' folder (eg '01/0001.mp3' for track #1)
+ */
+#define SOUND_PACK_STARTUP 1
+#define SOUND_PACK_FIRING 2
+#define SOUND_PACK_FIRE_STOP 3
+#define SOUND_PACK_SHUTDOWN 4
+
 
 #endif //PROTONPACKV3_COMMON_H

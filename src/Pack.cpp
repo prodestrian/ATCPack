@@ -1,6 +1,30 @@
 #include <Arduino.h>
 #include "Common.h"
-
+/**
+ * Master Pin Map
+ * D0 - Reserved Tx
+ * D1 - Reserved Rx
+ * D2 - Rotary Encoder Button 1 (Orange)
+ * D3 - Rotary Encoder 1A (Blue)
+ * D4 - Rotary Encoder 1B (Green)
+ * D5 - Rotary Encoder Button 2 (Orange)
+ * D6 - Rotary Encoder 2A (Yellow)
+ * D7 - Rotary Encoder 2B (Brown)
+ * D8 - Software Serial Rx (from Wand 9 Tx, AltSoftSerial pin can not be changed, Blue Wire)
+ * D9 - Software Serial Tx (to Wand 8 Rx, AltSoftSerial pin can not be changed, Green Wire)
+ * D10 - Audio Rx (from DFPlayer)
+ * D11 - Audio Tx (from DFPlayer)
+ * D12 - Audio Busy (from DFPlayer)
+ * D13 - Synchrotron Neopixel strip
+ * A0 -
+ * A1 -
+ * A2 -
+ * A3 -
+ * A4 - i2c SDA
+ * A5 - i2c SCL
+ * A6 -
+ * A7 -
+ */
 /**
  * Load GhostLab42/Spongeface Display Wrapper Class
  */
@@ -13,7 +37,7 @@ ATCDisplays displays;
 #include <ATCSynchrotron.h>
 
 // Which PIN is the Synchrotron LED strip attached to?
-#define SYNCHROTRON_PIN 6
+#define SYNCHROTRON_PIN 13
 
 // How many LEDs in the Synchrotron LED strip/ring?
 // NOTE: Your LED ring should be divisible by the SYNCHROTRON_CLUSTER_COUNT
@@ -46,10 +70,47 @@ ATCSynchrotron synchrotron;
 #include <SerialComms.h>
 SerialComms wand;
 
+// SoftwareSerial used for Audio Player
+#include <SoftwareSerial.h>
+#include "AudioPlayer.h"
+AudioPlayer audioPlayer;
+SoftwareSerial audioSerial(10, 11); // RX, TX
+
+// Rotary Encoders
+/**
+ * TODO: The encoders will be used to set the number on the top display.
+ * They unfortunately take forever to scroll through, so setting values from 000-999 is going
+ * to be too slow. Instead, we should set one digit at a time (from 0-9).
+ * This allows us to also include a null/blank value in each digit if needed.
+ * Hold down both buttons then release to enter "Set" mode.
+ * The top display will blank out, and a "cursor" will appear on the first digit (flashing hyphen?).
+ * We could use GhostLab42Reboot.write("-") to write non-numeric characters here.
+ * Use the first rotary encoder to select the character to display (scroll up/down).
+ * Use the second rotary encoder to select which digit to edit (0 through 6).
+ * Press either button to exit "Set" mode.
+ */
+//#include <ClickEncoder.h>
+////#include <TimerOne.h>
+//#define ROTARY_A_BUTTON 2 // D2- Rotary Encoder Button 1 (Orange)
+//#define ROTARY_A_PIN1 3 // D3 - Rotary Encoder 1A (Blue)
+//#define ROTARY_A_PIN2 4 // D4 - Rotary Encoder 1B (Green)
+//#define ROTARY_B_BUTTON 5// D5 - Rotary Encoder Button 2 (Orange)
+//#define ROTARY_B_PIN1 6// D6 - Rotary Encoder 2A (Yellow)
+//#define ROTARY_B_PIN2 7// D7 - Rotary Encoder 2B (Brown)
+//
+//ClickEncoder *encoderA;
+//ClickEncoder *encoderB;
+////void timerIsr() {
+////    encoderA->service();
+////    encoderB->service();
+////}
+//int16_t oldEncPosA, encPosA;
+//int16_t oldEncPosB, encPosB;
+
 void setup() {
-    if (DEBUG) {
+    //if (DEBUG) {
         Serial.begin(115200);
-    }
+    //}
 
     debugln(F("Initializing ATC Pack V3..."));
 
@@ -70,8 +131,8 @@ void setup() {
     // 60 LED ring
     if (SYNCHROTRON_LED_COUNT == 60)
     {
-        synchrotron.setLoopInterval(1600);
-        synchrotron.setClusterInterval(100);
+        synchrotron.setLoopInterval(1800);
+        synchrotron.setClusterInterval(120);
         synchrotron.setFadeIncrement(2);
     } else
     {
@@ -84,47 +145,198 @@ void setup() {
     // Trigger an immediate update of the Synchrotron
     synchrotron.update(true);
 
+    // Initialize Audio Player
+    audioSerial.begin(9600);
+    audioPlayer.begin(audioSerial, (DEBUG == 1));
+    audioPlayer.stop();
+
+    // Initialize Rotary Encoders
+    // NOTE: We have pins 1/2 reversed because of how they were wired up
+    // Steps currently set to 2 but this needs to be tested
+//    encoderA = new ClickEncoder(ROTARY_A_PIN2, ROTARY_A_PIN1, ROTARY_A_BUTTON, 2);
+//    encoderB = new ClickEncoder(ROTARY_B_PIN2, ROTARY_B_PIN1, ROTARY_B_BUTTON, 2);
+//    Timer1.initialize(1000);
+//    Timer1.attachInterrupt(timerIsr);
+//    encoderA->setAccelerationEnabled(true);
+//    encoderB->setAccelerationEnabled(true);
+//    oldEncPosA = -1;
+//    oldEncPosB = -1;
+
     debugln(F("ATC Pack V3 Initialized and Ready!"));
 }
 
-int changeCounter = 0;
+STATES currentState;
+STATES previousState;
+
+bool isFiring = false;
+bool wasFiring = false;
+
+bool isPlayingMusic = false;
+
 void loop() {
 
     displays.update();
 
     wand.update();
+//
+//    static uint32_t lastService = 0;
+//    if (micros() - lastService >= 1000) {
+//        lastService = micros();
+//        encoderA->service();
+//        //encoderB->service();
+//    }
+//
+//    encPosA += encoderA->getValue();
+//    //encPosB += encoderB->getValue();
+//    if (encPosA != oldEncPosA) {
+//        oldEncPosA = encPosA;
+//        Serial.print("Encoder A Value: ");
+//        Serial.println(encPosA);
+//    }
+////    if (encPosB != oldEncPosB) {
+////        oldEncPosB = encPosB;
+////        Serial.print("Encoder B Value: ");
+////        Serial.println(encPosB);
+////    }
+
+//    if (encoderA->getButton() == ClickEncoder::Clicked) {
+//        Serial.println(F("Button A Pressed!"));
+//    }
+//    if (encoderB->getButton() == ClickEncoder::Clicked) {
+//        Serial.println(F("Button B Pressed!"));
+//    }
 
     if (wand.changed()) {
-        /**
-         * TODO: We should refactor this to use numeric codes instead of strings
-         * These should be defined within SerialMessages as Enums.
-         * We could then set the max code and reject any value which is not within this range (eg 0-10).
-         * We should NOT set wand.changed() to true if an invalid value was received.
-         */
-        changeCounter++;
-        debug("Changed: ");
-        debugln(changeCounter);
         // The Wand has sent a new message
-        if (wand.isMessage(STR_MSG_ACTIVE)) {
-            synchrotron.setColor(CRGB(255,0,0));
-//            displays.enable();
-//            synchrotron.enable();
+        debugln(wand.message());
 
-            debugln("Active");
-        } else if (wand.isMessage(STR_MSG_IDLE)) {
-            synchrotron.setColor(CRGB(0,255,0));
-//            displays.disable();
-//            synchrotron.disable();
-            debugln("Idle");
-        } else {
-            debugln(wand.message());
+        wasFiring = isFiring;
+        isFiring = false;
+
+        if (wand.isMessage(MSG_INACTIVE)) {
+            previousState = currentState;
+            currentState = STATE_INACTIVE;
+        } else if(wand.isMessage(MSG_ACTIVE)) {
+            previousState = currentState;
+            currentState = STATE_ACTIVE;
+        } else if (wand.isMessage(MSG_MUSIC)) {
+            previousState = currentState;
+            currentState = STATE_MUSIC;
+        } else if (wand.isMessage(MSG_PARTY)) {
+            previousState = currentState;
+            currentState = STATE_PARTY;
+        } else if (wand.isMessage(MSG_VOL_00)) {
+            audioPlayer.setVolume(0);
+        } else if (wand.isMessage(MSG_VOL_01)) {
+            audioPlayer.setVolume(3);
+        } else if (wand.isMessage(MSG_VOL_02)) {
+            audioPlayer.setVolume(6);
+        } else if (wand.isMessage(MSG_VOL_03)) {
+            audioPlayer.setVolume(9);
+        } else if (wand.isMessage(MSG_VOL_04)) {
+            audioPlayer.setVolume(12);
+        } else if (wand.isMessage(MSG_VOL_05)) {
+            audioPlayer.setVolume(15);
+        } else if (wand.isMessage(MSG_VOL_06)) {
+            audioPlayer.setVolume(18);
+        } else if (wand.isMessage(MSG_VOL_07)) {
+            audioPlayer.setVolume(21);
+        } else if (wand.isMessage(MSG_VOL_08)) {
+            audioPlayer.setVolume(24);
+        } else if (wand.isMessage(MSG_VOL_09)) {
+            audioPlayer.setVolume(27);
+        } else if (wand.isMessage(MSG_VOL_10)) {
+            audioPlayer.setVolume(30);
+        } else if (wand.isMessage(MSG_FIRING)) {
+            // Fire
+            isFiring = true;
+        }
+
+        // Handle changes in pack states
+        if (currentState != previousState)
+        {
+            Serial.println(F("State Changed"));
+            // Pack state changed
+            if (currentState == STATE_INACTIVE)
+            {
+                // Pack is off
+                // Play shutdown sound
+                audioPlayer.playTrack(SOUND_PACK_SHUTDOWN);
+                Serial.println(F("Inactive"));
+            } else if (previousState == STATE_INACTIVE) {
+                // Pack was inactive and is now active
+                // Play startup sound
+                audioPlayer.playTrack(SOUND_PACK_STARTUP);
+                Serial.println(F("Active"));
+            } else if (previousState == STATE_PARTY || previousState == STATE_MUSIC) {
+                // We were probably playing music, we should stop
+                // This includes changing from Party to Music mode or back again
+                audioPlayer.stop();
+                isPlayingMusic = false;
+                Serial.println(F("Switched off Party or Music mode, stop playback"));
+            }
+        }
+
+        // Set Synchrotron Party Mode state
+        synchrotron.setPartyMode(currentState == STATE_PARTY);
+
+        // Handle firing sounds
+        if (isFiring && !wasFiring) {
+            // We started firing
+
+            if (currentState == STATE_ACTIVE) {
+                // We are in Active mode
+                // Play firing sound
+                audioPlayer.playTrack(SOUND_PACK_FIRING);
+            }
+            else if (currentState == STATE_MUSIC)
+            {
+                // We are in Music Mode
+                if (!isPlayingMusic)
+                {
+                    // Start playback of folder 02
+                    audioPlayer.playMp3Folder(2);
+                    isPlayingMusic = true;
+                } else {
+                    // Play next track in folder 02
+                    audioPlayer.nextTrack(2);
+                }
+            } else if (currentState == STATE_PARTY) {
+                // We are in Party Mode
+                if (!isPlayingMusic)
+                {
+                    // Play song in folder 3
+                    audioPlayer.playTrackInFolder(3, 1);
+                    isPlayingMusic = true;
+                }
+                // NOTE: If fire button is pressed while in party mode we don't
+                //       do anything, this allows the firing animation to play without constantly
+                //       resetting the track
+            }
+        } else if (!isFiring && wasFiring) {
+            // We stopped firing
+            if (currentState == STATE_ACTIVE) {
+                // Play stop firing sound
+                audioPlayer.playTrack(SOUND_PACK_FIRE_STOP);
+            }
+            // NOTE: We don't do anything with "stop firing" in the other modes.
+        }
+
+        // Handle firing synchrotron speed
+        if (isFiring) {
+            synchrotron.setLoopInterval(900);
+            synchrotron.setClusterInterval(60);
+            synchrotron.setFadeIncrement(4);
+        } else if (wasFiring) {
+            // Back to original speeds
+            synchrotron.setLoopInterval(1800);
+            synchrotron.setClusterInterval(120);
+            synchrotron.setFadeIncrement(2);
         }
     }
 
     if (synchrotron.update()) {
         // Clear the Serial buffer of any possible garbage values
         wand.flushBuffer();
-        // Skip the rest of the loop if we wrote to the LEDs
-        return;
     }
 }

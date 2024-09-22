@@ -9,20 +9,29 @@ bool ATCSynchrotron::update(bool force)
 {
     _currentMillis = millis();
 
-    if (_checkTimer(_loopMillis, _loopInterval) || force) {
-        // Loop timer has elapsed so we need to kick off a new cycling loop now
-        if (_isActive)
+    if (_isPartyMode) {
+        _updateCurrentHue();
+        fill_rainbow(_leds, _ledCount, _currentHue, 7);
+        // Add random glitter
+        _leds[ random16(_ledCount) ] += CRGB::White;
+    } else {
+        if (_checkTimer(_loopMillis, _loopInterval) || force)
         {
-            _isCycling = true;
+            // Loop timer has elapsed so we need to kick off a new cycling loop now
+            if (_isActive)
+            {
+                _isCycling = true;
+            }
         }
-    }
 
-    if (_checkTimer(_clusterMillis, _clusterInterval) || force) {
-        // Cluster millis has elapsed so we need to loop through the clusters
-        _updateClusterBrightness();
-    }
+        if (_checkTimer(_clusterMillis, _clusterInterval) || force)
+        {
+            // Cluster millis has elapsed so we need to loop through the clusters
+            _updateClusterBrightness();
+        }
 
-    _updateLedBrightness();
+        _updateLedBrightness();
+    }
 
     if (_checkTimer(_ledMillis, _ledInterval) || force) {
         // Write to the LED strip
@@ -109,6 +118,11 @@ void ATCSynchrotron::setColor(CRGB color)
     _currentColor = color;
 };
 
+void ATCSynchrotron::setPartyMode(bool isPartyMode)
+{
+    _isPartyMode = isPartyMode;
+};
+
 bool ATCSynchrotron::_checkTimer(unsigned long &millis, int &interval)
 {
     if (_currentMillis - millis >= (unsigned long) interval)
@@ -151,7 +165,7 @@ void ATCSynchrotron::_updateClusterBrightness()
         return;
     }
 
-    if (_currentCluster == 8)
+    if (_currentCluster == _clusterCount)
     {
         _currentCluster = 0;
         _isCycling = false;
@@ -160,6 +174,17 @@ void ATCSynchrotron::_updateClusterBrightness()
     {
         _clusterBrightness[_currentCluster] = 1;
         _currentCluster++;
+    }
+}
+
+void ATCSynchrotron::_updateCurrentHue()
+{
+    if (_currentHue ==0)
+    {
+        _currentHue = 255;
+    } else {
+        // We go backwards because the rainbow effect looks reversed otherwise
+        _currentHue--;
     }
 }
 

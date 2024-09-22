@@ -33,7 +33,7 @@ const int LED_CLUSTERS_60_8[8][2] = {
 
 class ATCSynchrotron
 {
-public:
+    public:
         // Constructor
         ATCSynchrotron();
         // Template initializer
@@ -42,6 +42,8 @@ public:
             this->_clusterCount = clusterCount;
 
             FastLED.addLeds<NEOPIXEL, DATA_PIN>(this->_leds, this->_ledCount);
+            FastLED.setBrightness(255);
+
             clear();
         }
 
@@ -55,6 +57,7 @@ public:
         void setFadeIncrement(int fadeIncrement);
         void setColor(CRGB color);
         void setFirstLedPosition(int firstLedPosition);
+        void setPartyMode(bool isPartyMode);
     private:
         int _ledCount;
         int _clusterCount;
@@ -64,8 +67,10 @@ public:
         int _ledInterval = 20;
         int _fadeIncrement = 2;
         int _firstLedPosition = 0;
+        int _currentHue = 0;
         bool _isActive = true;
         bool _isCycling = false;
+        bool _isPartyMode = false;
 
         unsigned long _currentMillis;
         unsigned long _loopMillis = 0;
@@ -85,6 +90,7 @@ public:
         int _getFirstIndexInCluster(int clusterIndex);
         int _getLastIndexInCluster(int clusterIndex);
         bool _isLedInCluster(int ledIndex, int clusterIndex);
+        void _updateCurrentHue();
 };
 
 #endif //ATCSYNCHROTRON_H

@@ -36,11 +36,7 @@ void SerialComms::update()
             _message = _newMessage;
         }
     }
-
-
-
 };
-
 
 bool SerialComms::changed()
 {
@@ -54,21 +50,26 @@ byte SerialComms::message()
 
 bool SerialComms::isMessage(byte expected)
 {
-    return _message ==expected;
+    return _message == expected;
 }
 
 void SerialComms::send(byte message)
 {
+    // Write the header
     for (unsigned int i = 0; i < sizeof(_header); ++i)
     {
         _altSerial.write(_header[i]);
     }
 
+    // Write the actual message
     _altSerial.write(message);
+
+    // Write the terminator
     _altSerial.write(_terminator);
-    Serial.print(F("Sending..."));
-    Serial.print(message);
-    Serial.println(_terminator);
+
+//    Serial.print(F("Sending..."));
+//    Serial.print(message);
+//    Serial.println(_terminator);
 };
 
 void SerialComms::flushBuffer()
@@ -126,7 +127,8 @@ void SerialComms::_updateBuffer()
             // Increment to the next header character
             currentHeaderIndex++;
             if (currentHeaderIndex == sizeof(_header)) {
-                // We have matched the FULL header
+                // We have matched the FULL header.
+                // The next loop will read the actual payload.
                 hasHeaderMatch = true;
             }
         }
@@ -134,6 +136,5 @@ void SerialComms::_updateBuffer()
             // It didn't match. Exit immediately.
             return;
         }
-
     }
 }

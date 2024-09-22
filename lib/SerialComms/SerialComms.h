@@ -2,6 +2,12 @@
 #define PROTONPACKV3_SERIALCOMMS_H
 
 // We use AltSoftSerial to handle comms
+/**
+ * NOTE: On an Arduino Nano:
+ * - Rx pin: 8
+ * - Tx pin: 9
+ * - Unusable PWM: 10
+ */
 #include "AltSoftSerial.h"
 
 class SerialComms {

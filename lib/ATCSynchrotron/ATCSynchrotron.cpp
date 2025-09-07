@@ -11,7 +11,7 @@ bool ATCSynchrotron::update(bool force)
 
     if (_isPartyMode) {
         _updateCurrentHue();
-        fill_rainbow(_leds, _ledCount, _currentHue, 7);
+        fill_rainbow_circular(_leds, _ledCount, _currentHue, 7);
         // Add random glitter
         _leds[ random16(_ledCount) ] += CRGB::White;
     } else {

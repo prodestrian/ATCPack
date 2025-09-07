@@ -147,7 +147,7 @@ void setup() {
 
     // Initialize Audio Player
     audioSerial.begin(9600);
-    audioPlayer.begin(audioSerial, (DEBUG == 1));
+    audioPlayer.begin(audioSerial, false);
     audioPlayer.stop();
 
     // Initialize Rotary Encoders
@@ -208,72 +208,91 @@ void loop() {
 
     if (wand.changed()) {
         // The Wand has sent a new message
-        debugln(wand.message());
 
         wasFiring = isFiring;
         isFiring = false;
 
+        debug(F("Wand sent state: "));
         if (wand.isMessage(MSG_INACTIVE)) {
             previousState = currentState;
             currentState = STATE_INACTIVE;
+            debugln(F("Inactive"));
         } else if(wand.isMessage(MSG_ACTIVE)) {
             previousState = currentState;
             currentState = STATE_ACTIVE;
+            debugln(F("Active"));
         } else if (wand.isMessage(MSG_MUSIC)) {
             previousState = currentState;
             currentState = STATE_MUSIC;
+            debugln(F("Music"));
         } else if (wand.isMessage(MSG_PARTY)) {
             previousState = currentState;
             currentState = STATE_PARTY;
+            debugln(F("Party"));
         } else if (wand.isMessage(MSG_VOL_00)) {
             audioPlayer.setVolume(0);
+            debugln(F("Volume 0"));
         } else if (wand.isMessage(MSG_VOL_01)) {
             audioPlayer.setVolume(3);
+            debugln(F("Volume 3"));
         } else if (wand.isMessage(MSG_VOL_02)) {
             audioPlayer.setVolume(6);
+            debugln(F("Volume 6"));
         } else if (wand.isMessage(MSG_VOL_03)) {
             audioPlayer.setVolume(9);
+            debugln(F("Volume 9"));
         } else if (wand.isMessage(MSG_VOL_04)) {
             audioPlayer.setVolume(12);
+            debugln(F("Volume 12"));
         } else if (wand.isMessage(MSG_VOL_05)) {
             audioPlayer.setVolume(15);
+            debugln(F("Volume 15"));
         } else if (wand.isMessage(MSG_VOL_06)) {
             audioPlayer.setVolume(18);
+            debugln(F("Volume 18"));
         } else if (wand.isMessage(MSG_VOL_07)) {
             audioPlayer.setVolume(21);
+            debugln(F("Volume 21"));
         } else if (wand.isMessage(MSG_VOL_08)) {
             audioPlayer.setVolume(24);
+            debugln(F("Volume 24"));
         } else if (wand.isMessage(MSG_VOL_09)) {
             audioPlayer.setVolume(27);
+            debugln(F("Volume 27"));
         } else if (wand.isMessage(MSG_VOL_10)) {
             audioPlayer.setVolume(30);
+            debugln(F("Volume 30"));
         } else if (wand.isMessage(MSG_FIRING)) {
             // Fire
             isFiring = true;
+            debugln(F("Firing"));
+        } else {
+            debugln(F("Unknown"));
         }
 
         // Handle changes in pack states
         if (currentState != previousState)
         {
-            Serial.println(F("State Changed"));
+            debug(F("State Changed from "));
+            debug(previousState);
+            debug(F(" to "));
+            debugln(currentState);
+
             // Pack state changed
             if (currentState == STATE_INACTIVE)
             {
                 // Pack is off
                 // Play shutdown sound
                 audioPlayer.playTrack(SOUND_PACK_SHUTDOWN);
-                Serial.println(F("Inactive"));
             } else if (previousState == STATE_INACTIVE) {
                 // Pack was inactive and is now active
                 // Play startup sound
                 audioPlayer.playTrack(SOUND_PACK_STARTUP);
-                Serial.println(F("Active"));
             } else if (previousState == STATE_PARTY || previousState == STATE_MUSIC) {
                 // We were probably playing music, we should stop
                 // This includes changing from Party to Music mode or back again
                 audioPlayer.stop();
                 isPlayingMusic = false;
-                Serial.println(F("Switched off Party or Music mode, stop playback"));
             }
         }
 
@@ -288,6 +307,7 @@ void loop() {
                 // We are in Active mode
                 // Play firing sound
                 audioPlayer.playTrack(SOUND_PACK_FIRING);
+                debugln(F("Start firing"));
             }
             else if (currentState == STATE_MUSIC)
             {
@@ -317,6 +337,7 @@ void loop() {
             // We stopped firing
             if (currentState == STATE_ACTIVE) {
                 // Play stop firing sound
+                debugln(F("Stop firing"));
                 audioPlayer.playTrack(SOUND_PACK_FIRE_STOP);
             }
             // NOTE: We don't do anything with "stop firing" in the other modes.
@@ -324,9 +345,9 @@ void loop() {
 
         // Handle firing synchrotron speed
         if (isFiring) {
-            synchrotron.setLoopInterval(900);
-            synchrotron.setClusterInterval(60);
-            synchrotron.setFadeIncrement(4);
+            synchrotron.setLoopInterval(600);
+            synchrotron.setClusterInterval(40);
+            synchrotron.setFadeIncrement(6);
         } else if (wasFiring) {
             // Back to original speeds
             synchrotron.setLoopInterval(1800);
@@ -339,4 +360,6 @@ void loop() {
         // Clear the Serial buffer of any possible garbage values
         wand.flushBuffer();
     }
+
+    previousState = currentState;
 }

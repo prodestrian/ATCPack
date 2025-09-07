@@ -17,7 +17,7 @@ class AudioPlayer
         void begin(Stream& serial, bool debug);
         void setVolume(int volume);
         void playTrack(int trackNo);
-        void AudioPlayer::playTrackInFolder(int folderNo, int trackNo);
+        void playTrackInFolder(int folderNo, int trackNo);
         void playMp3Folder(int folderNo);
         void nextTrack(int folderNo);
         void stop();

@@ -93,6 +93,8 @@ void loop() {
 
     // Determine current wand state
     currentPackState = controls.readState();
+    debug(F("State changed: "));
+    debugln(currentPackState);
 
     if (currentPackState != previousPackState)
     {

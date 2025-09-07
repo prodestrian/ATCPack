@@ -17,11 +17,11 @@
  */
 
 
-const byte MSG_INACTIVE = 0x00;
-const byte MSG_ACTIVE = 0x01;
-const byte MSG_FIRING = 0x02;
-const byte MSG_MUSIC = 0x03;
-const byte MSG_PARTY = 0x04;
+const byte MSG_INACTIVE = 0x01;
+const byte MSG_ACTIVE = 0x02;
+const byte MSG_FIRING = 0x03;
+const byte MSG_MUSIC = 0x04;
+const byte MSG_PARTY = 0x05;
 
 const byte MSG_VOL_00 = 0x10;
 const byte MSG_VOL_01 = 0x11;

@@ -29,6 +29,7 @@
  * Load GhostLab42/Spongeface Display Wrapper Class
  */
 #include <ATCDisplays.h>
+
 ATCDisplays displays;
 
 /**
@@ -68,11 +69,13 @@ ATCSynchrotron synchrotron;
  * https://www.pjrc.com/teensy/td_libs_AltSoftSerial.html
  */
 #include <SerialComms.h>
+
 SerialComms wand;
 
 // SoftwareSerial used for Audio Player
 #include <SoftwareSerial.h>
 #include "AudioPlayer.h"
+
 AudioPlayer audioPlayer;
 SoftwareSerial audioSerial(10, 11); // RX, TX
 
@@ -107,9 +110,19 @@ SoftwareSerial audioSerial(10, 11); // RX, TX
 //int16_t oldEncPosA, encPosA;
 //int16_t oldEncPosB, encPosB;
 
-void setup() {
+bool isFiring = false;
+bool wasFiring = false;
+
+bool isPlayingMusic = false;
+
+#include "StateManager.h"
+
+StateManager packState = StateManager();
+
+void setup()
+{
     //if (DEBUG) {
-        Serial.begin(115200);
+    Serial.begin(115200);
     //}
 
     debugln(F("Initializing ATC Pack V3..."));
@@ -134,7 +147,8 @@ void setup() {
         synchrotron.setLoopInterval(1800);
         synchrotron.setClusterInterval(120);
         synchrotron.setFadeIncrement(2);
-    } else
+    }
+    else
     {
         // 40 LED ring
         synchrotron.setLoopInterval(1600);
@@ -165,20 +179,14 @@ void setup() {
     debugln(F("ATC Pack V3 Initialized and Ready!"));
 }
 
-STATES currentState;
-STATES previousState;
-
-bool isFiring = false;
-bool wasFiring = false;
-
-bool isPlayingMusic = false;
-
-void loop() {
-
+void loop()
+{
     displays.update();
 
     wand.update();
-//
+
+    packState.update();
+
 //    static uint32_t lastService = 0;
 //    if (micros() - lastService >= 1000) {
 //        lastService = micros();
@@ -206,160 +214,198 @@ void loop() {
 //        Serial.println(F("Button B Pressed!"));
 //    }
 
-    if (wand.changed()) {
-        // The Wand has sent a new message
+    wasFiring = isFiring;
 
-        wasFiring = isFiring;
+    if (wand.changed())
+    {
+        // The Wand has sent a new message
         isFiring = false;
 
         debug(F("Wand sent state: "));
-        if (wand.isMessage(MSG_INACTIVE)) {
-            previousState = currentState;
-            currentState = STATE_INACTIVE;
+        if (wand.isMessage(MSG_INACTIVE))
+        {
+            packState.set(STATE_INACTIVE);
             debugln(F("Inactive"));
-        } else if(wand.isMessage(MSG_ACTIVE)) {
-            previousState = currentState;
-            currentState = STATE_ACTIVE;
+        }
+        else if (wand.isMessage(MSG_ACTIVE))
+        {
+            packState.set(STATE_ACTIVE);
             debugln(F("Active"));
-        } else if (wand.isMessage(MSG_MUSIC)) {
-            previousState = currentState;
-            currentState = STATE_MUSIC;
+        }
+        else if (wand.isMessage(MSG_MUSIC))
+        {
+            packState.set(STATE_MUSIC);
             debugln(F("Music"));
-        } else if (wand.isMessage(MSG_PARTY)) {
-            previousState = currentState;
-            currentState = STATE_PARTY;
+        }
+        else if (wand.isMessage(MSG_PARTY))
+        {
+            packState.set(STATE_PARTY);
             debugln(F("Party"));
-        } else if (wand.isMessage(MSG_VOL_00)) {
+        }
+        else if (wand.isMessage(MSG_VOL_00))
+        {
             audioPlayer.setVolume(0);
             debugln(F("Volume 0"));
-        } else if (wand.isMessage(MSG_VOL_01)) {
+        }
+        else if (wand.isMessage(MSG_VOL_01))
+        {
             audioPlayer.setVolume(3);
             debugln(F("Volume 3"));
-        } else if (wand.isMessage(MSG_VOL_02)) {
+        }
+        else if (wand.isMessage(MSG_VOL_02))
+        {
             audioPlayer.setVolume(6);
             debugln(F("Volume 6"));
-        } else if (wand.isMessage(MSG_VOL_03)) {
+        }
+        else if (wand.isMessage(MSG_VOL_03))
+        {
             audioPlayer.setVolume(9);
             debugln(F("Volume 9"));
-        } else if (wand.isMessage(MSG_VOL_04)) {
+        }
+        else if (wand.isMessage(MSG_VOL_04))
+        {
             audioPlayer.setVolume(12);
             debugln(F("Volume 12"));
-        } else if (wand.isMessage(MSG_VOL_05)) {
+        }
+        else if (wand.isMessage(MSG_VOL_05))
+        {
             audioPlayer.setVolume(15);
             debugln(F("Volume 15"));
-        } else if (wand.isMessage(MSG_VOL_06)) {
+        }
+        else if (wand.isMessage(MSG_VOL_06))
+        {
             audioPlayer.setVolume(18);
             debugln(F("Volume 18"));
-        } else if (wand.isMessage(MSG_VOL_07)) {
+        }
+        else if (wand.isMessage(MSG_VOL_07))
+        {
             audioPlayer.setVolume(21);
             debugln(F("Volume 21"));
-        } else if (wand.isMessage(MSG_VOL_08)) {
+        }
+        else if (wand.isMessage(MSG_VOL_08))
+        {
             audioPlayer.setVolume(24);
             debugln(F("Volume 24"));
-        } else if (wand.isMessage(MSG_VOL_09)) {
+        }
+        else if (wand.isMessage(MSG_VOL_09))
+        {
             audioPlayer.setVolume(27);
             debugln(F("Volume 27"));
-        } else if (wand.isMessage(MSG_VOL_10)) {
+        }
+        else if (wand.isMessage(MSG_VOL_10))
+        {
             audioPlayer.setVolume(30);
             debugln(F("Volume 30"));
-        } else if (wand.isMessage(MSG_FIRING)) {
+        }
+        else if (wand.isMessage(MSG_FIRING))
+        {
             // Fire
             isFiring = true;
             debugln(F("Firing"));
-        } else {
+        }
+        else
+        {
             debugln(F("Unknown"));
         }
+    }
 
-        // Handle changes in pack states
-        if (currentState != previousState)
+    // Handle changes in pack states
+    if (packState.changed())
+    {
+        debug(F("State Changed from "));
+        debug(packState.previous());
+        debug(F(" to "));
+        debugln(packState.current());
+
+        if (packState.changedTo(STATE_INACTIVE))
         {
-            debug(F("State Changed from "));
-            debug(previousState);
-            debug(F(" to "));
-            debugln(currentState);
-
-            // Pack state changed
-            if (currentState == STATE_INACTIVE)
-            {
-                // Pack is off
-                // Play shutdown sound
-                audioPlayer.playTrack(SOUND_PACK_SHUTDOWN);
-            } else if (previousState == STATE_INACTIVE) {
-                // Pack was inactive and is now active
-                // Play startup sound
-                audioPlayer.playTrack(SOUND_PACK_STARTUP);
-            } else if (previousState == STATE_PARTY || previousState == STATE_MUSIC) {
-                // We were probably playing music, we should stop
-                // This includes changing from Party to Music mode or back again
-                audioPlayer.stop();
-                isPlayingMusic = false;
-            }
+            // Pack is off
+            // Play shutdown sound
+            audioPlayer.playTrack(SOUND_PACK_SHUTDOWN);
+        }
+        else if (packState.changedFrom(STATE_INACTIVE))
+        {
+            // Pack was inactive and is now active
+            // Play startup sound
+            audioPlayer.playTrack(SOUND_PACK_STARTUP);
+        }
+        else if (packState.changedFrom(STATE_PARTY) || packState.changedFrom(STATE_MUSIC))
+        {
+            // We were probably playing music, we should stop
+            // This includes changing from Party to Music mode or back again
+            audioPlayer.stop();
+            isPlayingMusic = false;
         }
 
         // Set Synchrotron Party Mode state
-        synchrotron.setPartyMode(currentState == STATE_PARTY);
+        synchrotron.setPartyMode(packState.is(STATE_PARTY));
+    }
 
-        // Handle firing sounds
-        if (isFiring && !wasFiring) {
-            // We started firing
+    // Handle firing sounds
+    if (isFiring && !wasFiring)
+    {
+        // We started firing
 
-            if (currentState == STATE_ACTIVE) {
-                // We are in Active mode
-                // Play firing sound
-                audioPlayer.playTrack(SOUND_PACK_FIRING);
-                debugln(F("Start firing"));
-            }
-            else if (currentState == STATE_MUSIC)
-            {
-                // We are in Music Mode
-                if (!isPlayingMusic)
-                {
-                    // Start playback of folder 02
-                    audioPlayer.playMp3Folder(2);
-                    isPlayingMusic = true;
-                } else {
-                    // Play next track in folder 02
-                    audioPlayer.nextTrack(2);
-                }
-            } else if (currentState == STATE_PARTY) {
-                // We are in Party Mode
-                if (!isPlayingMusic)
-                {
-                    // Play song in folder 3
-                    audioPlayer.playTrackInFolder(3, 1);
-                    isPlayingMusic = true;
-                }
-                // NOTE: If fire button is pressed while in party mode we don't
-                //       do anything, this allows the firing animation to play without constantly
-                //       resetting the track
-            }
-        } else if (!isFiring && wasFiring) {
-            // We stopped firing
-            if (currentState == STATE_ACTIVE) {
-                // Play stop firing sound
-                debugln(F("Stop firing"));
-                audioPlayer.playTrack(SOUND_PACK_FIRE_STOP);
-            }
-            // NOTE: We don't do anything with "stop firing" in the other modes.
-        }
+        if (packState.is(STATE_ACTIVE))
+        {
+            // We are in Active mode
+            // Play firing sound
+            debugln(F("Start firing"));
+            audioPlayer.playTrack(SOUND_PACK_FIRING);
 
-        // Handle firing synchrotron speed
-        if (isFiring) {
+            // Handle firing synchrotron speed
             synchrotron.setLoopInterval(600);
             synchrotron.setClusterInterval(40);
             synchrotron.setFadeIncrement(6);
-        } else if (wasFiring) {
-            // Back to original speeds
-            synchrotron.setLoopInterval(1800);
-            synchrotron.setClusterInterval(120);
-            synchrotron.setFadeIncrement(2);
+        }
+        else if (packState.is(STATE_MUSIC))
+        {
+            // We are in Music Mode
+            if (!isPlayingMusic)
+            {
+                // Start playback of folder 02
+                audioPlayer.playMp3Folder(2);
+                isPlayingMusic = true;
+            }
+            else
+            {
+                // Play next track in folder 02
+                audioPlayer.nextTrack(2);
+            }
+        }
+        else if (packState.is(STATE_PARTY))
+        {
+            // We are in Party Mode
+            if (!isPlayingMusic)
+            {
+                // Play song in folder 3
+                audioPlayer.playTrackInFolder(3, 1);
+                isPlayingMusic = true;
+            }
+            // NOTE: If fire button is pressed while in party mode we don't
+            //       do anything, this allows the firing animation to play without constantly
+            //       resetting the track
         }
     }
+    else if (!isFiring && wasFiring)
+    {
+        // We stopped firing
+        if (packState.is(STATE_ACTIVE))
+        {
+            // Play stop firing sound
+            debugln(F("Stop firing"));
+            audioPlayer.playTrack(SOUND_PACK_FIRE_STOP);
+        }
 
-    if (synchrotron.update()) {
+        // Back to original speeds
+        synchrotron.setLoopInterval(1800);
+        synchrotron.setClusterInterval(120);
+        synchrotron.setFadeIncrement(2);
+    }
+
+    if (synchrotron.update())
+    {
         // Clear the Serial buffer of any possible garbage values
         wand.flushBuffer();
     }
-
-    previousState = currentState;
 }
